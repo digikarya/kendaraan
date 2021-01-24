@@ -1,8 +1,8 @@
 package app
 
 import (
-	"github.com/digikarya/kepegawaian/app/handler"
-	"github.com/digikarya/kepegawaian/config"
+	"github.com/digikarya/kendaraan/app/handler"
+	"github.com/digikarya/kendaraan/config"
 	"github.com/gorilla/mux"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"

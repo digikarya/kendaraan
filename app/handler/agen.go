@@ -2,8 +2,8 @@ package handler
 
 import (
 	"errors"
-	"github.com/digikarya/kepegawaian/app/model"
-	"github.com/digikarya/kepegawaian/helper"
+	"github.com/digikarya/kendaraan/app/model"
+	"github.com/digikarya/kendaraan/helper"
 	"github.com/gorilla/mux"
 	"gorm.io/gorm"
 	"net/http"
