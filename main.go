@@ -1,11 +1,10 @@
 package main
 
 import (
-	"github.com/digikarya/kepegawaian/app"
+	"github.com/digikarya/kendaraan/app"
 	"github.com/gorilla/mux"
 	"log"
-
-	"github.com/digikarya/kepegawaian/config"
+	"github.com/digikarya/kendaraan/config"
 	"net/http"
 )
 
@@ -15,9 +14,9 @@ import (
 func main() {
 	r := mux.NewRouter()
 	conf := config.GetConfig()
-	//auth := &auth.Auth{}
-	//auth.Initialize(conf,r)
-	Kepegawaian := &app.Kepegawaian{}
+	//authHelper := &authHelper.Auth{}
+	//authHelper.Initialize(conf,r)
+	Kepegawaian := &app.Kendaraan{}
 	Kepegawaian.Initialize(conf,r)
 	//saksi := &app.SaksiApp{}
 	//saksi.Initialize(config,r)

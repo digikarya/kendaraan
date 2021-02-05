@@ -12,13 +12,13 @@ import (
 )
 
 // App has router and db instances
-type Kepegawaian struct {
+type Kendaraan struct {
 	Router *mux.Router
 	DB     *gorm.DB
 }
 
 // Initialize initializes the app with predefined configuration
-func (a *Kepegawaian) Initialize(config *config.Config,route *mux.Router) {
+func (a *Kendaraan) Initialize(config *config.Config,route *mux.Router) {
 	db, err := gorm.Open(mysql.Open(config.GetDSN()), &gorm.Config{
 		PrepareStmt: true,
 		SkipDefaultTransaction: true,
@@ -38,52 +38,89 @@ func (a *Kepegawaian) Initialize(config *config.Config,route *mux.Router) {
 }
 
 // setRouters sets the all required routers
-func (a *Kepegawaian) setRouters() {
+func (a *Kendaraan) setRouters() {
 	//// Routing for handling the projectsUserFind
 
-	a.Post("/agen", a.guard(handler.AgenCreate))
-	a.Get("/agen/all", a.guard(handler.AgenAll))
-	a.Get("/agen/{hashid}", a.guard(handler.AgenFind))
-	a.Put("/agen/{hashid}", a.guard(handler.AgenUpdate))
-	a.Delete("/agen/{hashid}", a.guard(handler.AgenDelete))
+	a.Post("/layout", a.guard(handler.LayoutCreate))
+	a.Get("/layout/all", a.guard(handler.LayoutAll))
+	a.Get("/layout/{hashid}", a.guard(handler.LayoutFind))
+	a.Put("/layout/{hashid}", a.guard(handler.LayoutUpdate))
+	a.Delete("/layout/{hashid}", a.guard(handler.LayoutDelete))
 
+	a.Post("/jenis_kendaraan", a.guard(handler.JenisKendaraanCreate))
+	a.Get("/jenis_kendaraan/all", a.guard(handler.JenisKendaraanAll))
+	a.Get("/jenis_kendaraan/{hashid}", a.guard(handler.JenisKendaraanFind))
+	a.Put("/jenis_kendaraan/{hashid}", a.guard(handler.JenisKendaraanUpdate))
+	a.Delete("/jenis_kendaraan/{hashid}", a.guard(handler.JenisKendaraanDelete))
+
+	a.Post("/kategori_kendaraan", a.guard(handler.KategoriKendaraanCreate))
+	a.Get("/kategori_kendaraan/all", a.guard(handler.KategoriKendaraanAll))
+	a.Get("/kategori_kendaraan/{hashid}", a.guard(handler.KategoriKendaraanFind))
+	a.Put("/kategori_kendaraan/{hashid}", a.guard(handler.KategoriKendaraanUpdate))
+	a.Delete("/kategori_kendaraan/{hashid}", a.guard(handler.KategoriKendaraanDelete))
+
+	a.Post("/trayek", a.guard(handler.TrayekCreate))
+	a.Get("/trayek/all", a.guard(handler.TrayekAll))
+	a.Get("/trayek/{hashid}", a.guard(handler.TrayekFind))
+	a.Put("/trayek/{hashid}", a.guard(handler.TrayekUpdate))
+	a.Delete("/trayek/{hashid}", a.guard(handler.TrayekDelete))
+	a.Post("/trayek/detail/", a.guard(handler.DetailTrayekCreate))
+	a.Put("/trayek/detail/{hashid}", a.guard(handler.DetailTrayekUpdate))
+	a.Delete("/trayek/detail/{hashid}", a.guard(handler.DetailTrayekDelete))
+
+
+	a.Post("/check_list", a.guard(handler.CheckListKendaraanCreate))
+	a.Get("/check_list/all", a.guard(handler.CheckListKendaraanAll))
+	a.Get("/check_list/{hashid}", a.guard(handler.CheckListKendaraanFind))
+	a.Put("/check_list/{hashid}", a.guard(handler.CheckListKendaraanUpdate))
+	a.Delete("/check_list/{hashid}", a.guard(handler.CheckListKendaraanDelete))
+
+	a.Post("/check_list/detail/", a.guard(handler.DetailCheckListKendaraanCreate))
+	a.Put("/check_list/detail/{hashid}", a.guard(handler.DetailCheckListKendaraanUpdate))
+	a.Delete("/check_list/detail/{hashid}", a.guard(handler.DetailCheckListKendaraanDelete))
+
+	a.Post("/layout/search", a.guard(handler.SearchLayout))
+	a.Post("/jenis_kendaraan/search", a.guard(handler.SearchJenisKendaraan))
+	a.Post("/kategori_kendaraan/search", a.guard(handler.SearchKategoriKendaraan))
+	a.Post("/jadwal/search", a.guard(handler.SearchLayout))
+	a.Post("/trayek/search", a.guard(handler.SearchLayout))
 }
 
 
 // Get wraps the router for GET method
-func (a *Kepegawaian) Get(path string, f func(w http.ResponseWriter, r *http.Request)) {
+func (a *Kendaraan) Get(path string, f func(w http.ResponseWriter, r *http.Request)) {
 	a.Router.HandleFunc(path, f).Methods("GET")
 }
 
 // Put wraps the router for PUT method
-func (a *Kepegawaian) Put(path string, f func(w http.ResponseWriter, r *http.Request)) {
+func (a *Kendaraan) Put(path string, f func(w http.ResponseWriter, r *http.Request)) {
 	a.Router.HandleFunc(path, f).Methods("PUT")
 }
 
 // Post wraps the router for POST method
-func (a *Kepegawaian) Post(path string, f func(w http.ResponseWriter, r *http.Request)) {
+func (a *Kendaraan) Post(path string, f func(w http.ResponseWriter, r *http.Request)) {
 	a.Router.HandleFunc(path, f).Methods("POST")
 }
 
 // Delete wraps the router for DELETE method
-func (a *Kepegawaian) Delete(path string, f func(w http.ResponseWriter, r *http.Request)) {
+func (a *Kendaraan) Delete(path string, f func(w http.ResponseWriter, r *http.Request)) {
 	a.Router.HandleFunc(path, f).Methods("DELETE")
 }
 
 // Run the app on it's router
-func (a *Kepegawaian) Run(host string) {
+func (a *Kendaraan) Run(host string) {
 	log.Fatal(http.ListenAndServe(host, a.Router))
 }
 
 type RequestHandlerFunction func(db *gorm.DB, w http.ResponseWriter, r *http.Request)
 
-func (a *Kepegawaian) guest(handler RequestHandlerFunction) http.HandlerFunc {
+func (a *Kendaraan) guest(handler RequestHandlerFunction) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		handler(a.DB, w, r)
 	}
 }
 
-func (a *Kepegawaian) guard(handler RequestHandlerFunction) http.HandlerFunc {
+func (a *Kendaraan) guard(handler RequestHandlerFunction) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		//if err := authHelper.Authorization(a.DB,r,"*");err != nil {
 		//	helper.RespondJSONError(w,http.StatusUnauthorized,err)
@@ -93,7 +130,7 @@ func (a *Kepegawaian) guard(handler RequestHandlerFunction) http.HandlerFunc {
 	}
 }
 //
-//func (a *Kepegawaian) guardAdmin(handler RequestHandlerFunction) http.HandlerFunc {
+//func (a *Kendaraan) guardAdmin(handler RequestHandlerFunction) http.HandlerFunc {
 //	return func(w http.ResponseWriter, r *http.Request) {
 //		if err := authHelper.Authorization(a.DB,r,"admin");err != nil {
 //			helper.RespondJSONError(w,http.StatusUnauthorized,err)
@@ -103,7 +140,7 @@ func (a *Kepegawaian) guard(handler RequestHandlerFunction) http.HandlerFunc {
 //	}
 //}
 //
-//func (a *Kepegawaian) guardClient(handler RequestHandlerFunction) http.HandlerFunc {
+//func (a *Kendaraan) guardClient(handler RequestHandlerFunction) http.HandlerFunc {
 //	return func(w http.ResponseWriter, r *http.Request) {
 //		helper.CorsHelper(w,r)
 //		if r.Method == http.MethodOptions {
@@ -117,7 +154,7 @@ func (a *Kepegawaian) guard(handler RequestHandlerFunction) http.HandlerFunc {
 //	}
 //}
 //
-//func (a *Kepegawaian) guardSaksi(handler RequestHandlerFunction) http.HandlerFunc {
+//func (a *Kendaraan) guardSaksi(handler RequestHandlerFunction) http.HandlerFunc {
 //	return func(w http.ResponseWriter, r *http.Request) {
 //		helper.CorsHelper(w,r)
 //		if r.Method == http.MethodOptions {
