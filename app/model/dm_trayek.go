@@ -2,13 +2,21 @@ package model
 
 import (
 	"errors"
-	"github.com/digikarya/kendaraan/helper"
+	"github.com/digikarya/helper"
 	"gorm.io/gorm"
 	"log"
 	"net/http"
 	"strconv"
 )
 
+type TrayekPayloadMany struct{
+	TrayekID    uint `gorm:"column:trayek_id; PRIMARY_KEY" json:"-"`
+	HashID 		string `json:"id"  validate:""`
+	NoTrayek 	string `json:"no_trayek"  validate:"required"`
+	Asal 	string `json:"asal"  validate:"required"`
+	Tujuan 	string `json:"tujuan"  validate:"required"`
+	Detail 			interface{} `gorm:"foreignKey:trayek_id;references:trayek_id" json:"detail"  validate:"" `
+}
 type TrayekPayload struct{
 		TrayekID    uint `gorm:"column:trayek_id; PRIMARY_KEY" json:"-"`
 		HashID 		string `json:"id"  validate:""`
@@ -30,6 +38,10 @@ func (TrayekPayload) TableName() string {
 func (TrayekResponse) TableName() string {
 	return "trayek"
 }
+func (TrayekPayloadMany) TableName() string {
+	return "trayek"
+}
+
 
 func (data *TrayekPayload) Create(db *gorm.DB,r *http.Request) (interface{},error){
 	err := data.setPayload(r)
@@ -40,9 +52,11 @@ func (data *TrayekPayload) Create(db *gorm.DB,r *http.Request) (interface{},erro
 	tmp,err := data.defineValue()
 	result := trx.Select("no_trayek","asal","tujuan").Create(&tmp)
 	if result.Error != nil {
+		trx.Rollback()
 		return nil,result.Error
 	}
 	if result.RowsAffected < 1 {
+		trx.Rollback()
 		return nil,errors.New("failed to create data")
 	}
 	//log.Print(tmp.AgenID)
@@ -85,14 +99,27 @@ func (data *TrayekResponse) Find(db *gorm.DB,string ...string) (interface{},erro
 	if err != nil {
 		return nil,errors.New("data tidak sesuai")
 	}
-	result := db.Where("trayek_id = ?", id).Find(&data)
-	if err := result.Error; err != nil {
-		return nil,err
+	result := db.Where("trayek_id",id).Find(&data)
+	if result.Error != nil {
+		return nil,result.Error
 	}
+
 	if result.RowsAffected < 1 {
 		return nil,errors.New("data tidak ditemukan")
 	}
-	return data,nil
+	tmp := TrayekPayloadMany{}
+	tmp.TrayekID = data.TrayekID
+	tmp.HashID = data.HashID
+	tmp.NoTrayek = data.NoTrayek
+	tmp.Asal = data.Asal
+	tmp.Tujuan = data.Tujuan
+	tmpDetail := DetailTrayekResponse{}
+	tmp.Detail,err = tmpDetail.Find(db,tmp.HashID)
+	if err != nil {
+		return nil, err
+	}
+
+	return tmp,nil
 }
 
 func (data *TrayekPayload) Delete(db *gorm.DB,string ...string) (interface{},error){

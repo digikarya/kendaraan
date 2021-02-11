@@ -32,7 +32,6 @@ func GetConfig() *Config {
 }
 
 func (c *Config)  GetDSN() string {
-	//DSN Format
 	//dsn := "zhi:admin123@tcp(127.0.0.1:3306)/authHelper?charset=utf8mb4&parseTime=True&loc=Local"
 	return c.DB.Username+":"+c.DB.Password+"@tcp("+c.DB.Host+")/"+c.DB.Database+"?charset=utf8mb4&parseTime=True&loc=Local"
 }

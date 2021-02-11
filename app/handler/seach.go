@@ -1,13 +1,24 @@
 package handler
 
 import (
-
-	"github.com/digikarya/kendaraan/helper"
+	"github.com/digikarya/helper"
 	"github.com/digikarya/kendaraan/app/model"
-
 	"gorm.io/gorm"
 	"net/http"
 )
+
+
+func SearchCheckList(db *gorm.DB, w http.ResponseWriter, r *http.Request) {
+	serv := model.SearchRequest{}
+	data,err := serv.CheckListSearch(db,r)
+	if err != nil {
+		helper.RespondJSONError(w, http.StatusBadRequest, err)
+		return
+	}
+	helper.RespondJSON(w, "Found",http.StatusOK, data)
+	return
+}
+
 
 func SearchLayout(db *gorm.DB, w http.ResponseWriter, r *http.Request) {
 	serv := model.SearchRequest{}
@@ -19,6 +30,8 @@ func SearchLayout(db *gorm.DB, w http.ResponseWriter, r *http.Request) {
 	helper.RespondJSON(w, "Found",http.StatusOK, data)
 	return
 }
+
+
 
 func SearchJenisKendaraan(db *gorm.DB, w http.ResponseWriter, r *http.Request) {
 	serv := model.SearchRequest{}
@@ -42,7 +55,16 @@ func SearchKategoriKendaraan(db *gorm.DB, w http.ResponseWriter, r *http.Request
 	return
 }
 
-
+func SearchTrayek(db *gorm.DB, w http.ResponseWriter, r *http.Request) {
+	serv := model.SearchRequest{}
+	data,err := serv.TrayekSearch(db,r)
+	if err != nil {
+		helper.RespondJSONError(w, http.StatusBadRequest, err)
+		return
+	}
+	helper.RespondJSON(w, "Found",http.StatusOK, data)
+	return
+}
 
 //func SearchAgen(db *gorm.DB, w http.ResponseWriter, r *http.Request) {
 //	serv := model.SearchRequest{}

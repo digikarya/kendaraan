@@ -2,7 +2,7 @@ package model
 
 import (
 	"errors"
-	"github.com/digikarya/kendaraan/helper"
+	"github.com/digikarya/helper"
 	"gorm.io/gorm"
 	"log"
 	"net/http"
@@ -17,15 +17,15 @@ type KendaraanPayload struct{
 	NoMesin 			string `json:"no_mesin"  validate:"required"`
 	NoRangka 			string `json:"no_rangka"  validate:"required"`
 	Pemilik 			string `json:"pemilik"  validate:"required"`
-	MaxSeat 			string `json:"max_seat"  validate:"required"`
-	DayaAngkut 			string `json:"daya_angkut"  validate:"required"`
+	MaxSeat 			uint `json:"max_seat"  validate:"required"`
+	DayaAngkut 			uint `json:"daya_angkut"  validate:"required"`
 	Merk 				string `json:"merk"  validate:"required"`
 	TahunPembuatan 		string `json:"tahun_pembuatan"  validate:"required"`
 	KapasitasMesin 		string `json:"kapasitas_mesin"  validate:"required"`
 	KodeUnit 			string `json:"kode_unit"  validate:"required"`
 	NoBody 				string `json:"no_body"  validate:"required"`
-	TrayekID 			uint `json:"trayek_id"  validate:"required"`
-	KategoriKendaraanID uint `json:"kategori_kendaraan_id"  validate:"required"`
+	TrayekID 			string `json:"trayek_id"  validate:"required"`
+	KategoriKendaraanID string `json:"kategori_kendaraan_id"  validate:"required"`
 	Status 				string `json:"status"  validate:""`
 	Kategori 			string `json:"kategori"  validate:""`
 	Trayek	 			string `json:"trayek"  validate:""`
@@ -39,8 +39,8 @@ type KendaraanResponse struct{
 	NoMesin 			string `json:"no_mesin"  validate:"required"`
 	NoRangka 			string `json:"no_rangka"  validate:"required"`
 	Pemilik 			string `json:"pemilik"  validate:"required"`
-	MaxSeat 			string `json:"max_seat"  validate:"required"`
-	DayaAngkut 			string `json:"daya_angkut"  validate:"required"`
+	MaxSeat 			uint `json:"max_seat"  validate:"required"`
+	DayaAngkut 			uint `json:"daya_angkut"  validate:"required"`
 	Merk 				string `json:"merk"  validate:"required"`
 	TahunPembuatan 		string `json:"tahun_pembuatan"  validate:"required"`
 	KapasitasMesin 		string `json:"kapasitas_mesin"  validate:"required"`
@@ -66,13 +66,18 @@ func (data *KendaraanPayload) Create(db *gorm.DB,r *http.Request) (interface{},e
 	if err != nil {
 		return nil, err
 	}
-	trx := db.Begin()
 	tmp,err := data.defineValue()
-	result := trx.Select("nama","alamat","tipe","no_tlpn","no_wa","daerah_id").Create(&tmp)
+	if err != nil {
+		return nil, err
+	}
+	trx := db.Begin()
+	result := trx.Select("jenis_kendaraan", "no_kendaraan", "no_mesin", "no_rangka", "pemilik", "max_seat", "daya_angkut", "merk", "tahun_pembuatan", "kapasitas_mesin", "kode_unit", "no_body", "trayek_id", "kategori_kendaraan_id").Create(&tmp)
 	if result.Error != nil {
+		trx.Rollback()
 		return nil,result.Error
 	}
 	if result.RowsAffected < 1 {
+		trx.Rollback()
 		return nil,errors.New("failed to create data")
 	}
 	//log.Print(tmp.AgenID)
@@ -99,11 +104,11 @@ func (data *KendaraanPayload) Update(db *gorm.DB,r *http.Request,string ...strin
 	}
 	tmp,err := data.defineValue()
 	tmpUpdate := KendaraanResponse{}
-	if err := db.Where("agen_id = ?", id).First(&tmpUpdate).Error; err != nil {
+	if err := db.Where("kendaraan_id = ?", id).First(&tmpUpdate).Error; err != nil {
 		return nil,err
 	}
 	tmpUpdate.switchValue(&tmp)
-	result := db.Where("agen_id = ?", id).Save(&tmpUpdate)
+	result := db.Where("kendaraan_id = ?", id).Save(&tmpUpdate)
 	if result.Error != nil {
 		return nil,errors.New("gagal update")
 	}
@@ -112,22 +117,27 @@ func (data *KendaraanPayload) Update(db *gorm.DB,r *http.Request,string ...strin
 
 
 func (data *KendaraanResponse) Find(db *gorm.DB,string ...string) (interface{},error){
+	tmp := KendaraanPayload{}
 	id,err := helper.DecodeHash(string[0])
 	if err != nil {
 		return nil,errors.New("data tidak sesuai")
 	}
-	sql :=  "SELECT " +
-		"	 agen.hash_id,agen.nama,agen.alamat,agen.no_tlpn,agen.tipe," +
-		"    daerah.daerah_id, daerah.kabupaten, daerah.kecamatan, daerah.provinsi" +
-		"	 FROM agen JOIN daerah ON agen.daerah_id=daerah.daerah_id WHERE agen_id = ?"
-	result := db.Raw(sql+" LIMIT 1", id).Scan(&data)
+	sql := `SELECT
+			kendaraan.*,trayek.trayek_id ,
+				trayek.hash_id 'trayek_id',CONCAT(trayek.asal,' - ',trayek.tujuan) 'trayek',
+				kategori_kendaraan.kategori_id 'katid',kategori_kendaraan.hash_id 'kategori_kendaraan_id', CONCAT(kategori_kendaraan.nama,' - ',kategori_kendaraan.kode) 'kategori'
+			FROM kendaraan
+			JOIN trayek ON kendaraan.trayek_id=trayek.trayek_id
+			JOIN kategori_kendaraan ON kendaraan.kategori_kendaraan_id=kategori_kendaraan.kategori_id
+			WHERE kendaraan_id = ?`
+	result := db.Raw(sql+" LIMIT 1", id).Scan(&tmp)
 	if err := result.Error; err != nil {
 		return nil,err
 	}
 	if result.RowsAffected < 1 {
 		return nil,errors.New("data tidak ditemukan")
 	}
-	return data,nil
+	return tmp,nil
 }
 
 
@@ -138,14 +148,14 @@ func (data *KendaraanPayload) Delete(db *gorm.DB,string ...string) (interface{},
 	if err != nil {
 		return nil,errors.New("data tidak sesuai")
 	}
-	result := db.Where("agen_id = ?", id).Find(&data)
+	result := db.Where("kendaraan_id = ?", id).Find(&data)
 	if err := result.Error; err != nil {
 		return nil,err
 	}
 	if result.RowsAffected < 1 {
 		return nil,errors.New("data tidak ditemukan")
 	}
-	response := db.Where("agen_id = ?",id).Delete(&data)
+	response := db.Where("kendaraan_id = ?",id).Delete(&data)
 	if response.Error != nil {
 		log.Print(response.Error)
 		return nil,errors.New("gagal di hapus")
@@ -156,16 +166,19 @@ func (data *KendaraanPayload) Delete(db *gorm.DB,string ...string) (interface{},
 
 
 func (data *KendaraanResponse) All(db *gorm.DB,string ...string) (interface{}, error) {
-	var result []KendaraanResponse
+	var result []KendaraanPayload
 	limit,err := strconv.Atoi(string[1])
 	if err != nil {
 		return nil, err
 	}
 	//trans := db.Limit(limit).Find(&result)
-	sql :=  "SELECT " +
-		"	 agen.hash_id,agen.nama,agen.alamat,agen.no_tlpn,agen.tipe," +
-		"    daerah.daerah_id, daerah.kabupaten, daerah.kecamatan, daerah.provinsi" +
-		"	 FROM agen JOIN daerah ON agen.daerah_id=daerah.daerah_id"
+	sql := `SELECT
+			kendaraan.*,trayek.trayek_id ,
+				trayek.hash_id 'trayek_id',CONCAT(trayek.asal,' - ',trayek.tujuan) 'trayek',
+				kategori_kendaraan.kategori_id 'katid',kategori_kendaraan.hash_id 'kategori_kendaraan_id', CONCAT(kategori_kendaraan.nama,' - ',kategori_kendaraan.kode) 'kategori'
+			FROM kendaraan
+			JOIN trayek ON kendaraan.trayek_id=trayek.trayek_id
+			JOIN kategori_kendaraan ON kendaraan.kategori_kendaraan_id=kategori_kendaraan.kategori_id`
 	hashID := string[0]
 	param1 := limit
 	param2 := limit
@@ -174,9 +187,9 @@ func (data *KendaraanResponse) All(db *gorm.DB,string ...string) (interface{}, e
 		if err != nil {
 			return nil,err
 		}
-		sql += " WHERE agen_id > ?"
+		sql += " WHERE kendaraan_id > ?"
 		param1 = int(id)
-		//trans = trans.Where("agen_id > ?",id).Find(&result)
+		//trans = trans.Where("kendaraan_id > ?",id).Find(&result)
 	}
 	exec := db.Raw(sql+" LIMIT ?", param1,param2).Scan(&result)
 	if exec.Error != nil {
@@ -193,6 +206,28 @@ func (data *KendaraanResponse) All(db *gorm.DB,string ...string) (interface{}, e
 
 func (data *KendaraanPayload) defineValue()  (tmp KendaraanResponse,err error) {
 	// ambil data dari payload menjadi data siap insert atau update
+	tmp.KendaraanID = data.KendaraanID
+	tmp.JenisKendaraan = data.JenisKendaraan
+	tmp.NoKendaraan = data.NoKendaraan
+	tmp.NoMesin = data.NoMesin
+	tmp.NoRangka = data.NoRangka
+	tmp.Pemilik = data.Pemilik
+	tmp.MaxSeat = data.MaxSeat
+	tmp.DayaAngkut = data.DayaAngkut
+	tmp.Merk = data.Merk
+	tmp.TahunPembuatan = data.TahunPembuatan
+	tmp.KapasitasMesin = data.KapasitasMesin
+	tmp.KodeUnit = data.KodeUnit
+	tmp.NoBody = data.NoBody
+	tmp.Status = data.Status
+	tmp.TrayekID,err = helper.DecodeHash(data.TrayekID)
+	if err != nil {
+		return tmp,errors.New("data tidak sesuai")
+	}
+	tmp.KategoriKendaraanID,err = helper.DecodeHash(data.KategoriKendaraanID)
+	if err != nil {
+		return tmp,errors.New("data tidak sesuai")
+	}
 	return tmp,nil
 }
 
@@ -224,7 +259,7 @@ func (data *KendaraanResponse) setPayload(r *http.Request)  error  {
 
 func (data *KendaraanPayload) countData(db *gorm.DB,id uint) (int64,error) {
 	var count int64
-	db.Model(&KendaraanResponse{}).Where("agen_id = ?", id).Count(&count)
+	db.Model(&KendaraanResponse{}).Where("kendaraan_id = ?", id).Count(&count)
 	if count < 1 {
 		return count, errors.New("data tidak ditemukan")
 	}
@@ -239,7 +274,7 @@ func (data *KendaraanPayload) updateHashId(db *gorm.DB, id int)  error {
 		return err
 	}
 	//log.Print(tmp.DaerahID)
-	response := db.Model(&data).Where("agen_id",id).Update("hash_id", hashID)
+	response := db.Model(&data).Where("kendaraan_id",id).Update("hash_id", hashID)
 	if response.Error != nil{
 		return response.Error
 	}
