@@ -2,7 +2,7 @@ package model
 
 import (
 	"errors"
-	"github.com/digikarya/kendaraan/helper"
+	"github.com/digikarya/helper"
 	"gorm.io/gorm"
 	"log"
 	"net/http"
@@ -18,7 +18,10 @@ type KategoriKendaraanPayload struct{
 		LayoutKursiID 		string `json:"layout_id"  validate:"required"`
 		JenisKendaraanID	string `json:"jenis_kendaraan_id"  validate:"required"`
 		Kapasitas			uint `json:"kapasitas"  validate:""`
-		Jenis				string `json:"jenis_kendaraan"  validate:""`
+		JenisKendaraan		string `json:"jenis_kendaraan"  validate:""`
+		CheckList   		string `json:"check_list"  validate:""`
+		Layout		   		string `json:"layout"  validate:""`
+
 }
 type KategoriKendaraanResponse struct{
 	KategoriID    		uint `gorm:"column:kategori_id; PRIMARY_KEY" json:"-"`
@@ -29,7 +32,9 @@ type KategoriKendaraanResponse struct{
 	LayoutKursiID 		uint `json:"layout_id"  validate:"required,numeric"`
 	JenisKendaraanID	uint `json:"jenis_kendaraan_id"  validate:"required,numeric"`
 	Kapasitas			int `json:"kapasitas"  validate:""`
-	Jenis				string `json:"jenis_kendaraan"  validate:""`
+	JenisKendaraan		string `json:"jenis_kendaraan"  validate:""`
+	CheckList   		string `json:"check_list"  validate:""`
+	Layout		   		string `json:"layout"  validate:""`
 }
 
 func (KategoriKendaraanPayload) TableName() string {
@@ -110,8 +115,13 @@ func (data *KategoriKendaraanPayload) Find(db *gorm.DB,string ...string) (interf
 	}
 	sql :=  "SELECT " +
 		"	kategori_kendaraan.*," +
-		"	jenis_kendaraan.hash_id 'jenis_kendaraan_id', concat(jenis_kendaraan.nama,' - ',jenis_kendaraan.kode) AS 'Jenis' " +
-		"	FROM kategori_kendaraan JOIN jenis_kendaraan ON kategori_kendaraan.jenis_kendaraan_id=jenis_kendaraan.jenis_Id " +
+		"	jenis_kendaraan.hash_id 'jenis_kendaraan_id', concat(jenis_kendaraan.nama,' - ',jenis_kendaraan.kode) AS 'jenis_kendaraan', " +
+		"	check_list_kendaraan.hash_id 'check_list_id',concat(check_list_kendaraan.jenis_kendaraan,' - ',check_list_kendaraan.merek) AS 'check_list', " +
+		"	layout_kursi.hash_id 'check_list_id', layout_kursi.nama AS 'layout' " +
+		"	FROM kategori_kendaraan" +
+		"	JOIN jenis_kendaraan ON kategori_kendaraan.jenis_kendaraan_id=jenis_kendaraan.jenis_Id " +
+		"	JOIN check_list_kendaraan ON kategori_kendaraan.check_list_id=check_list_kendaraan.check_list_id " +
+		"	JOIN layout_kursi ON kategori_kendaraan.layout_kursi_id=layout_kursi.layout_id " +
 		" WHERE kategori_id = ?"
 	result := db.Raw(sql+" LIMIT 1", id).Scan(&data)
 	if err := result.Error; err != nil {
@@ -157,9 +167,14 @@ func (data *KategoriKendaraanPayload) All(db *gorm.DB,string ...string) (interfa
 	//trans := db.Limit(limit).Find(&result)
 	sql :=  "SELECT " +
 		"	kategori_kendaraan.*," +
-		"	jenis_kendaraan.hash_id 'jenis_kendaraan_id', concat(jenis_kendaraan.nama,' - ',jenis_kendaraan.kode) AS 'Jenis' " +
-		"	FROM kategori_kendaraan JOIN jenis_kendaraan ON kategori_kendaraan.jenis_kendaraan_id=jenis_kendaraan.jenis_Id "
-	hashID := string[0]
+		"	jenis_kendaraan.hash_id 'jenis_kendaraan_id', concat(jenis_kendaraan.nama,' - ',jenis_kendaraan.kode) AS 'jenis_kendaraan', " +
+		"	check_list_kendaraan.hash_id 'check_list_id',concat(check_list_kendaraan.jenis_kendaraan,' - ',check_list_kendaraan.merek) AS 'check_list', " +
+		"	layout_kursi.hash_id 'check_list_id', layout_kursi.nama AS 'layout' " +
+		"	FROM kategori_kendaraan" +
+		"	JOIN jenis_kendaraan ON kategori_kendaraan.jenis_kendaraan_id=jenis_kendaraan.jenis_Id " +
+		"	JOIN check_list_kendaraan ON kategori_kendaraan.check_list_id=check_list_kendaraan.check_list_id " +
+		"	JOIN layout_kursi ON kategori_kendaraan.layout_kursi_id=layout_kursi.layout_id "
+		hashID := string[0]
 	param1 := limit
 	param2 := limit
 	if hashID != "" {

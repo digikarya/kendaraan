@@ -2,7 +2,7 @@ package model
 
 import (
 	"errors"
-	"github.com/digikarya/kendaraan/helper"
+	"github.com/digikarya/helper"
 	"gorm.io/gorm"
 	"log"
 	"net/http"
@@ -49,9 +49,11 @@ func (data *LayoutPayload) Create(db *gorm.DB,r *http.Request) (interface{},erro
 	tmp,err := data.defineValue()
 	result := trx.Select("nama","brs_kiri","brs_kanan","klm_kiri","klm_kanan","seat_belakang","total_seat").Create(&tmp)
 	if result.Error != nil {
+		trx.Rollback()
 		return nil,result.Error
 	}
 	if result.RowsAffected < 1 {
+		trx.Rollback()
 		return nil,errors.New("failed to create data")
 	}
 	//log.Print(tmp.AgenID)

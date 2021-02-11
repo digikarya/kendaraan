@@ -2,7 +2,7 @@ package model
 
 import (
 	"errors"
-	"github.com/digikarya/kendaraan/helper"
+	"github.com/digikarya/helper"
 	"gorm.io/gorm"
 	"log"
 	"net/http"

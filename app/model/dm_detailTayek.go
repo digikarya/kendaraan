@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/digikarya/kendaraan/helper"
+	"github.com/digikarya/helper"
 	"gorm.io/gorm"
 	"log"
 	"net/http"
@@ -14,22 +14,20 @@ import (
 type DetailTrayekPayload struct{
 		DetailTrayekID  uint `gorm:"column:detail_trayek_id; PRIMARY_KEY" json:"-"`
 		HashID 			string `json:"id"  validate:""`
-		Nama 			string `json:"nama"  validate:"required"`
+		Nama 			string `json:"nama"  validate:""`
 		Sequence 		int `json:"sequence"  validate:""`
 		AgenID 			string `json:"agen_id"  validate:"required"`
 		TrayekID 		string `json:"trayek_id"  validate:"required"`
 		NamaDaerah 		string `json:"nama_daerah"  validate:""`
-		NamaAgen 		string `json:"nama_agen"  validate:""`
 }
 type DetailTrayekResponse struct{
 	DetailTrayekID  uint `gorm:"column:detail_trayek_id; PRIMARY_KEY" json:"-"`
 	HashID 			string `json:"id"  validate:""`
-	Nama 			string `json:"nama"  validate:"required"`
+	Nama 			string `json:"nama"  validate:""`
 	Sequence 		int `json:"sequence"  validate:""`
-	AgenID 			uint `json:"agen_id"  validate:"required"`
-	TrayekID 		uint `json:"trayek_id"  validate:"required"`
+	AgenID 			uint `json:"-"  validate:"required"`
+	TrayekID 		uint `json:"-"  validate:"required"`
 	NamaDaerah 		string `json:"nama_daerah"  validate:""`
-	NamaAgen 		string `json:"nama_agen"  validate:""`
 }
 
 func (DetailTrayekPayload) TableName() string {
@@ -46,8 +44,9 @@ func (data *DetailTrayekPayload) Create(db *gorm.DB,r *http.Request) (interface{
 		return nil, err
 	}
 	trx := db.Begin()
-	tmp,err := data.defineValue()
+	tmp,err := data.defineValue(trx)
 	if err != nil {
+		trx.Rollback()
 		return nil, err
 	}
 	result := trx.Select("nama","sequence","agen_id","trayek_id","nama_daerah","nama_agen").Create(&tmp)
@@ -81,7 +80,7 @@ func (data *DetailTrayekPayload) Update(db *gorm.DB,r *http.Request,string ...st
 	if _,err := data.countData(db,id);err != nil {
 		return nil, err
 	}
-	tmp,err := data.defineValue()
+	tmp,err := data.defineValue(db)
 	tmpUpdate := DetailTrayekResponse{}
 	if err := db.Where("detail_trayek_id = ?", id).First(&tmpUpdate).Error; err != nil {
 		return nil,err
@@ -99,14 +98,15 @@ func (data *DetailTrayekResponse) Find(db *gorm.DB,string ...string) (interface{
 	if err != nil {
 		return nil,errors.New("data tidak sesuai")
 	}
-	result := db.Where("detail_trayek_id = ?", id).Find(&data)
+	tmp := []DetailTrayekResponse{}
+	result := db.Where("trayek_id = ?", id).Order("sequence asc").Find(&tmp)
 	if err := result.Error; err != nil {
 		return nil,err
 	}
 	if result.RowsAffected < 1 {
 		return nil,errors.New("data tidak ditemukan")
 	}
-	return data,nil
+	return tmp,nil
 }
 
 func (data *DetailTrayekPayload) Delete(db *gorm.DB,string ...string) (interface{},error){
@@ -138,16 +138,16 @@ func (data *DetailTrayekResponse) All(db *gorm.DB,string ...string) (interface{}
 	if err != nil {
 		return nil, err
 	}
-	trans := db.Limit(limit).Find(&result)
+	trans := db.Limit(limit).First(&result)
 	hashID := string[0]
 	if hashID != "" {
 		id,err := helper.DecodeHash(hashID)
 		if err != nil {
 			return nil,err
 		}
-		trans = trans.Where("detail_trayek_id > ?",id).Find(&result)
+		trans = trans.Where("detail_trayek_id > ?",id).First(&result)
 	}
-	exec := trans.Find(&result)
+	exec := trans.First(&result)
 	if exec.Error != nil {
 		return result,exec.Error
 	}
@@ -160,9 +160,8 @@ func (data *DetailTrayekResponse) All(db *gorm.DB,string ...string) (interface{}
 // ==================================================================================================
 
 
-func (data *DetailTrayekPayload) defineValue()  (tmp DetailTrayekResponse,err error) {
+func (data *DetailTrayekPayload) defineValue(db *gorm.DB)  (tmp DetailTrayekResponse,err error) {
 	// ambil data dari payload menjadi data siap insert atau update
-	tmp.Nama = data.Nama
 	//tmp.Sequence = data.Sequence
 	if err = data.checkOtherService(&tmp,data.AgenID); err != nil {
 		return tmp,err
@@ -172,11 +171,15 @@ func (data *DetailTrayekPayload) defineValue()  (tmp DetailTrayekResponse,err er
 		return tmp,errors.New("data tidak sesuai")
 	}
 	tmp.TrayekID,err = helper.DecodeHash(data.TrayekID)
-	log.Print(tmp.TrayekID)
-	log.Print("trayek")
-
 	if err != nil {
 		return tmp,errors.New("data tidak sesuai")
+	}
+	var sequence []*int
+	result := db.Raw("SELECT MAX(sequence) 'sequence' FROM `detail_trayek` WHERE trayek_id = ? LIMIT 1", 2).Scan(&sequence)
+	if sequence != nil || result.RowsAffected > 0{
+		tmp.Sequence = *sequence[0] + 1
+	}else{
+		tmp.Sequence = 0
 	}
 	return tmp,nil
 }
@@ -184,20 +187,22 @@ func (data *DetailTrayekPayload) defineValue()  (tmp DetailTrayekResponse,err er
 func (data *DetailTrayekPayload) checkOtherService(tmp *DetailTrayekResponse,hashID ...string)  (err error) {
 	checkAgen := helper.GetEndpoint().Kepegawaian.URL+helper.GetEndpoint().Kepegawaian.Agen+"/"+hashID[0]
 	code,responseAgen,err := helper.Curl("GET",checkAgen,nil)
-	log.Print(responseAgen)
 	if err != nil{
 		return err
 	}
 	if code != http.StatusOK {
 		return errors.New("Agen tidak ditemukan ")
 	}
-	var result map[string]interface{}
-	json.Unmarshal(responseAgen, &result)
-	if val, ok := result["nama"]; ok {
-		get := fmt.Sprintf("%v", val)
-		tmp.NamaAgen = get
+	var result map[string]map[string]interface{}
+	err = json.Unmarshal(responseAgen, &result)
+	if err != nil{
+		return err
 	}
-	if val, ok := result["kecamatan"]; ok {
+	if val, ok := result["Data"]["nama"]; ok {
+		get := fmt.Sprintf("%v", val)
+		tmp.Nama = get
+	}
+	if val, ok := result["Data"]["kecamatan"]; ok {
 		get := fmt.Sprintf("%v", val)
 		tmp.NamaDaerah = get
 	}

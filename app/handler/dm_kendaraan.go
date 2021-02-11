@@ -9,8 +9,8 @@ import (
 	"net/http"
 )
 
-func JadwalCreate(db *gorm.DB, w http.ResponseWriter, r *http.Request) {
-	serv := model.JadwalPayload{}
+func KendaraanCreate(db *gorm.DB, w http.ResponseWriter, r *http.Request) {
+	serv := model.KendaraanPayload{}
 	data,err := serv.Create(db,r)
 	if err != nil {
 		helper.RespondJSONError(w, http.StatusBadRequest, err)
@@ -20,8 +20,8 @@ func JadwalCreate(db *gorm.DB, w http.ResponseWriter, r *http.Request) {
 	return
 }
 
-func JadwalAll(db *gorm.DB, w http.ResponseWriter, r *http.Request) {
-	serv := model.JadwalResponse{}
+func KendaraanAll(db *gorm.DB, w http.ResponseWriter, r *http.Request) {
+	serv := model.KendaraanResponse{}
 	hashID,limit := helper.DecodeURLParam(r)
 	data,err := serv.All(db,hashID,limit)
 	if err != nil {
@@ -32,8 +32,8 @@ func JadwalAll(db *gorm.DB, w http.ResponseWriter, r *http.Request) {
 	return
 }
 
-func JadwalFind(db *gorm.DB, w http.ResponseWriter, r *http.Request) {
-	serv := model.JadwalResponse{}
+func KendaraanFind(db *gorm.DB, w http.ResponseWriter, r *http.Request) {
+	serv := model.KendaraanResponse{}
 	vars := mux.Vars(r)
 	hashid,exist := vars["hashid"]
 	if !exist{
@@ -49,8 +49,8 @@ func JadwalFind(db *gorm.DB, w http.ResponseWriter, r *http.Request) {
 	return
 }
 
-func JadwalUpdate(db *gorm.DB, w http.ResponseWriter, r *http.Request) {
-	serv := model.JadwalPayload{}
+func KendaraanUpdate(db *gorm.DB, w http.ResponseWriter, r *http.Request) {
+	serv := model.KendaraanPayload{}
 	vars := mux.Vars(r)
 	hashid,exist := vars["hashid"]
 	if !exist{
@@ -66,8 +66,8 @@ func JadwalUpdate(db *gorm.DB, w http.ResponseWriter, r *http.Request) {
 	return
 }
 
-func JadwalDelete(db *gorm.DB, w http.ResponseWriter, r *http.Request) {
-	serv := model.JadwalPayload{}
+func KendaraanDelete(db *gorm.DB, w http.ResponseWriter, r *http.Request) {
+	serv := model.KendaraanPayload{}
 	vars := mux.Vars(r)
 	hashid,exist := vars["hashid"]
 	if !exist{

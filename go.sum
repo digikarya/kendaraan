@@ -1,4 +1,6 @@
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
+github.com/digikarya/helper v0.0.0-20210205165101-266c778546bb h1:pq741bki3omN4Au+6v9ovH74InALrosKbiRV1Af5SYk=
+github.com/digikarya/helper v0.0.0-20210205165101-266c778546bb/go.mod h1:NdZO9HloKSjFIu4jPsD+YJT6QdAG9hEMgyqg/IEhyiM=
 github.com/go-playground/assert/v2 v2.0.1/go.mod h1:VDjEfimB/XKnb+ZQfWdccd7VUvScMdVu0Titje2rxJ4=
 github.com/go-playground/locales v0.13.0 h1:HyWk6mgj5qFqCT5fjGBuRArbVDfE4hi8+e8ceBS/t7Q=
 github.com/go-playground/locales v0.13.0/go.mod h1:taPMhCMXrRLJO55olJkUXHZBHCxTMfnGwq/HNwmWNS8=

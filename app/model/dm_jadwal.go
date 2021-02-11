@@ -2,30 +2,32 @@ package model
 
 import (
 	"errors"
-	"github.com/digikarya/kendaraan/helper"
+	"github.com/digikarya/helper"
 	"gorm.io/gorm"
 	"log"
 	"net/http"
 	"strconv"
+	"time"
 )
 
 type JadwalPayload struct{
 		JadwalID    uint `gorm:"column:layout_id; PRIMARY_KEY" json:"-"`
 		HashID 		string `json:"id"  validate:""`
-		WaktuKeberangkatan 	int `json:"waktu_keberangkatan"  validate:"required"`
-		WaktuKedataangan 	int `json:"waktu_kedataangan"  validate:"required"`
+		WaktuKeberangkatan 	string `json:"waktu_keberangkatan"  validate:"required"`
+		WaktuKedataangan 	string `json:"waktu_kedataangan"  validate:"required"`
 		TrayekID 	string `json:"trayek_id"  validate:"required"`
+		Trayek 		string `json:"trayek"  validate:""`
 }
 type JadwalResponse struct{
 	JadwalID    uint `gorm:"column:layout_id; PRIMARY_KEY" json:"-"`
 	HashID 		string `json:"id"  validate:""`
-	WaktuKeberangkatan 	int `json:"waktu_keberangkatan"  validate:"required"`
-	WaktuKedataangan 	int `json:"waktu_kedataangan"  validate:"required"`
+	WaktuKeberangkatan 	string `json:"waktu_keberangkatan"  validate:"required"`
+	WaktuKedataangan 	string `json:"waktu_kedataangan"         vvalidate:"required"`
 	TrayekID 	uint `json:"trayek_id"  validate:"required,numeric"`
+	Trayek 		string `json:"trayek"  validate:""`
 }
 
 func (JadwalPayload) TableName() string {
-	return "jadwal"
 	return "jadwal"
 }
 func (JadwalResponse) TableName() string {
@@ -38,8 +40,11 @@ func (data *JadwalPayload) Create(db *gorm.DB,r *http.Request) (interface{},erro
 	if err != nil {
 		return nil, err
 	}
-	trx := db.Begin()
 	tmp,err := data.defineValue()
+	if err != nil {
+		return nil,err
+	}
+	trx := db.Begin()
 	result := trx.Select("waktu_keberangkatan","waktu_kedataangan","kendaraan_id","trayek_id").Create(&tmp)
 	if result.Error != nil {
 		trx.Rollback()
@@ -90,14 +95,21 @@ func (data *JadwalResponse) Find(db *gorm.DB,string ...string) (interface{},erro
 	if err != nil {
 		return nil,errors.New("data tidak sesuai")
 	}
-	result := db.Where("jadwal_id = ?", id).Find(&data)
+	tmp := JadwalPayload{}
+	sql :=  `SELECT 
+			jadwal.*,
+			trayek.trayek_id 'trayekid',trayek.hash_id 'trayek_id',CONCAT(trayek.no_trayek,' | ',trayek.asal,' - ',trayek.tujuan) 'trayek'
+			FROM jadwal 
+			JOIN trayek ON jadwal.trayek_id=trayek.trayek_id 
+			WHERE jadwal_id = ?`
+	result := db.Raw(sql+" LIMIT 1", id).Scan(&tmp)
 	if err := result.Error; err != nil {
 		return nil,err
 	}
 	if result.RowsAffected < 1 {
 		return nil,errors.New("data tidak ditemukan")
 	}
-	return data,nil
+	return tmp,nil
 }
 
 
@@ -126,16 +138,17 @@ func (data *JadwalPayload) Delete(db *gorm.DB,string ...string) (interface{},err
 
 
 func (data *JadwalResponse) All(db *gorm.DB,string ...string) (interface{}, error) {
-	var result []JadwalResponse
+	var result []JadwalPayload
 	limit,err := strconv.Atoi(string[1])
 	if err != nil {
 		return nil, err
 	}
 	//trans := db.Limit(limit).Find(&result)
-	sql :=  "SELECT " +
-		"	 agen.hash_id,agen.nama,agen.alamat,agen.no_tlpn,agen.tipe," +
-		"    daerah.daerah_id, daerah.kabupaten, daerah.kecamatan, daerah.provinsi" +
-		"	 FROM agen JOIN daerah ON agen.daerah_id=daerah.daerah_id"
+	sql :=  `SELECT 
+			jadwal.*,
+			trayek.trayek_id 'trayekid',trayek.hash_id 'trayek_id',CONCAT(trayek.no_trayek,' | ',trayek.asal,' - ',trayek.tujuan) 'trayek'
+			FROM jadwal 
+			JOIN trayek ON jadwal.trayek_id=trayek.trayek_id`
 	hashID := string[0]
 	param1 := limit
 	param2 := limit
@@ -163,12 +176,20 @@ func (data *JadwalResponse) All(db *gorm.DB,string ...string) (interface{}, erro
 
 func (data *JadwalPayload) defineValue()  (tmp JadwalResponse,err error) {
 	// ambil data dari payload menjadi data siap insert atau update
-	tmp.WaktuKeberangkatan = data.WaktuKeberangkatan
-	tmp.WaktuKeberangkatan = data.WaktuKeberangkatan
-	//tmp.KendaraanID,err = helper.DecodeHash(data.KendaraanID)
-	//if err != nil {
-	//	return tmp,errors.New("data tidak sesuai")
-	//}
+	WaktuKeberangkatan, err := time.Parse("15:04:05", data.WaktuKeberangkatan)
+	if err != nil {
+		return JadwalResponse{}, errors.New("Invalid payload")
+	}
+	WaktuKedataangan, err := time.Parse("15:04:05", data.WaktuKedataangan)
+	if err != nil {
+		return JadwalResponse{}, errors.New("Invalid payload")
+	}
+	tmp.WaktuKeberangkatan = WaktuKeberangkatan.Format("15:04:05")
+	tmp.WaktuKedataangan = WaktuKedataangan.Format("15:04:05")
+	tmp.TrayekID,err = helper.DecodeHash(data.TrayekID)
+	if err != nil {
+		return tmp,errors.New("data tidak sesuai")
+	}
 	tmp.TrayekID,err = helper.DecodeHash(data.TrayekID)
 	if err != nil {
 		return tmp,errors.New("data tidak sesuai")
@@ -177,10 +198,8 @@ func (data *JadwalPayload) defineValue()  (tmp JadwalResponse,err error) {
 }
 
 func (data *JadwalResponse) switchValue(tmp *JadwalResponse) {
-	// hanya digunakan untuk update
 	data.WaktuKeberangkatan = tmp.WaktuKeberangkatan
 	data.WaktuKeberangkatan = tmp.WaktuKeberangkatan
-	//data.KendaraanID = tmp.KendaraanID
 	data.TrayekID = tmp.TrayekID
 }
 

@@ -79,11 +79,25 @@ func (a *Kendaraan) setRouters() {
 	a.Put("/check_list/detail/{hashid}", a.guard(handler.DetailCheckListKendaraanUpdate))
 	a.Delete("/check_list/detail/{hashid}", a.guard(handler.DetailCheckListKendaraanDelete))
 
+	a.Post("/jadwal", a.guard(handler.JadwalCreate))
+	a.Get("/jadwal/all", a.guard(handler.JadwalAll))
+	a.Get("/jadwal/{hashid}", a.guard(handler.JadwalFind))
+	a.Put("/jadwal/{hashid}", a.guard(handler.JadwalUpdate))
+	a.Delete("/jadwal/{hashid}", a.guard(handler.JadwalDelete))
+
+	a.Post("/kendaraan", a.guard(handler.KendaraanCreate))
+	a.Get("/kendaraan/all", a.guard(handler.KendaraanAll))
+	a.Get("/kendaraan/{hashid}", a.guard(handler.KendaraanFind))
+	a.Put("/kendaraan/{hashid}", a.guard(handler.KendaraanUpdate))
+	a.Delete("/kendaraan/{hashid}", a.guard(handler.KendaraanDelete))
+
+
 	a.Post("/layout/search", a.guard(handler.SearchLayout))
 	a.Post("/jenis_kendaraan/search", a.guard(handler.SearchJenisKendaraan))
 	a.Post("/kategori_kendaraan/search", a.guard(handler.SearchKategoriKendaraan))
 	a.Post("/jadwal/search", a.guard(handler.SearchLayout))
-	a.Post("/trayek/search", a.guard(handler.SearchLayout))
+	a.Post("/check_list/search", a.guard(handler.SearchCheckList))
+	a.Post("/trayek/search", a.guard(handler.SearchTrayek))
 }
 
 

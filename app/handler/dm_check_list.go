@@ -3,7 +3,7 @@ package handler
 import (
 	"errors"
 	"github.com/digikarya/kendaraan/app/model"
-	"github.com/digikarya/kendaraan/helper"
+	"github.com/digikarya/helper"
 	"github.com/gorilla/mux"
 	"gorm.io/gorm"
 	"net/http"
