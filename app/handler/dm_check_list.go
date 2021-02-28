@@ -51,6 +51,27 @@ func CheckListKendaraanFind(db *gorm.DB, w http.ResponseWriter, r *http.Request)
 	return
 }
 
+
+func CheckListKendaraanFindByKategori(db *gorm.DB, w http.ResponseWriter, r *http.Request) {
+	serv := model.CheckListKendaraanResponseMany{}
+	vars := mux.Vars(r)
+	hashid,exist := vars["hashid"]
+	if !exist{
+		helper.RespondJSONError(w, http.StatusBadRequest, errors.New("Invalid id"))
+		return
+	}
+
+	data,err := serv.FindByKategori(db,hashid)
+	if err != nil {
+		helper.RespondJSONError(w, http.StatusBadRequest, err)
+		return
+	}
+
+	helper.RespondJSON(w, "Found",http.StatusOK, data)
+	return
+}
+
+
 func CheckListKendaraanUpdate(db *gorm.DB, w http.ResponseWriter, r *http.Request) {
 	serv := model.CheckListKendaraanPayload{}
 	vars := mux.Vars(r)

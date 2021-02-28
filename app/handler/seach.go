@@ -66,6 +66,29 @@ func SearchTrayek(db *gorm.DB, w http.ResponseWriter, r *http.Request) {
 	return
 }
 
+
+func SearchJadwal(db *gorm.DB, w http.ResponseWriter, r *http.Request) {
+	serv := model.SearchRequest{}
+	data,err := serv.JadwalSearch(db,r)
+	if err != nil {
+		helper.RespondJSONError(w, http.StatusBadRequest, err)
+		return
+	}
+	helper.RespondJSON(w, "Found",http.StatusOK, data)
+	return
+}
+
+func SearchKendaraan(db *gorm.DB, w http.ResponseWriter, r *http.Request) {
+	serv := model.SearchRequest{}
+	data,err := serv.KendaraanSearch(db,r)
+	if err != nil {
+		helper.RespondJSONError(w, http.StatusBadRequest, err)
+		return
+	}
+	helper.RespondJSON(w, "Found",http.StatusOK, data)
+	return
+}
+
 //func SearchAgen(db *gorm.DB, w http.ResponseWriter, r *http.Request) {
 //	serv := model.SearchRequest{}
 //	data,err := serv.AgenSearch(db,r)

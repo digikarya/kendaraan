@@ -11,7 +11,7 @@ import (
 )
 
 type JadwalPayload struct{
-		JadwalID    uint `gorm:"column:layout_id; PRIMARY_KEY" json:"-"`
+		JadwalID    uint `gorm:"column:jadwal_id; PRIMARY_KEY" json:"-"`
 		HashID 		string `json:"id"  validate:""`
 		WaktuKeberangkatan 	string `json:"waktu_keberangkatan"  validate:"required"`
 		WaktuKedataangan 	string `json:"waktu_kedataangan"  validate:"required"`
@@ -83,6 +83,8 @@ func (data *JadwalPayload) Update(db *gorm.DB,r *http.Request,string ...string) 
 	}
 	tmpUpdate.switchValue(&tmp)
 	result := db.Where("jadwal_id = ?", id).Save(&tmpUpdate)
+
+	result = db.Select("waktu_keberangkatan","waktu_kedataangan","kendaraan_id","trayek_id").Updates(&tmpUpdate)
 	if result.Error != nil {
 		return nil,errors.New("gagal update")
 	}
@@ -138,7 +140,7 @@ func (data *JadwalPayload) Delete(db *gorm.DB,string ...string) (interface{},err
 
 
 func (data *JadwalResponse) All(db *gorm.DB,string ...string) (interface{}, error) {
-	var result []JadwalPayload
+	 result :=  []JadwalPayload{}
 	limit,err := strconv.Atoi(string[1])
 	if err != nil {
 		return nil, err

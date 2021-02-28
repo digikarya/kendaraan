@@ -116,9 +116,8 @@ func (data *TrayekResponse) Find(db *gorm.DB,string ...string) (interface{},erro
 	tmpDetail := DetailTrayekResponse{}
 	tmp.Detail,err = tmpDetail.Find(db,tmp.HashID)
 	if err != nil {
-		return nil, err
+		tmp.Detail = []DetailTrayekPayload{}
 	}
-
 	return tmp,nil
 }
 
@@ -146,7 +145,7 @@ func (data *TrayekPayload) Delete(db *gorm.DB,string ...string) (interface{},err
 
 
 func (data *TrayekResponse) All(db *gorm.DB,string ...string) (interface{}, error) {
-	var result []TrayekResponse
+	result := []TrayekResponse{}
 	limit,err := strconv.Atoi(string[1])
 	if err != nil {
 		return nil, err

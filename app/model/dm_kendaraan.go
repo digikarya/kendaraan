@@ -10,7 +10,7 @@ import (
 )
 
 type KendaraanPayload struct{
-	KendaraanID    		uint `gorm:"column:layout_id; PRIMARY_KEY" json:"-"`
+	KendaraanID    		uint `gorm:"column:kendaraan_id; PRIMARY_KEY" json:"-"`
 	HashID 				string `json:"id"  validate:""`
 	JenisKendaraan 		string `json:"jenis_kendaraan"  validate:""`
 	NoKendaraan 		string `json:"no_kendaraan"  validate:"required"`
@@ -29,10 +29,11 @@ type KendaraanPayload struct{
 	Status 				string `json:"status"  validate:""`
 	Kategori 			string `json:"kategori"  validate:""`
 	Trayek	 			string `json:"trayek"  validate:""`
-
+	LayoutID   			string  `json:"layout_id"  validate:""`
+	JumlahSeat			uint `json:"jumlah_seat"  validate:""`
 }
 type KendaraanResponse struct{
-	KendaraanID    		uint `gorm:"column:layout_id; PRIMARY_KEY" json:"-"`
+	KendaraanID    		uint `gorm:"column:kendaraan_id; PRIMARY_KEY" json:"-"`
 	HashID 				string `json:"id"  validate:""`
 	JenisKendaraan 		string `json:"jenis_kendaraan"  validate:""`
 	NoKendaraan 		string `json:"no_kendaraan"  validate:"required"`
@@ -51,6 +52,8 @@ type KendaraanResponse struct{
 	Status 				string `json:"status"  validate:""`
 	Kategori 			string `json:"kategori"  validate:""`
 	Trayek	 			string `json:"trayek"  validate:""`
+	LayoutID   			string  `json:"layout_id"  validate:""`
+	JumlahSeat			uint `json:"jumlah_seat"  validate:""`
 }
 
 func (KendaraanPayload) TableName() string {
@@ -108,7 +111,7 @@ func (data *KendaraanPayload) Update(db *gorm.DB,r *http.Request,string ...strin
 		return nil,err
 	}
 	tmpUpdate.switchValue(&tmp)
-	result := db.Where("kendaraan_id = ?", id).Save(&tmpUpdate)
+	result := db.Select("jenis_kendaraan", "no_kendaraan", "no_mesin", "no_rangka", "pemilik", "max_seat", "daya_angkut", "merk", "tahun_pembuatan", "kapasitas_mesin", "kode_unit", "no_body", "trayek_id", "kategori_kendaraan_id").Updates(&tmpUpdate)
 	if result.Error != nil {
 		return nil,errors.New("gagal update")
 	}
@@ -125,10 +128,11 @@ func (data *KendaraanResponse) Find(db *gorm.DB,string ...string) (interface{},e
 	sql := `SELECT
 			kendaraan.*,trayek.trayek_id ,
 				trayek.hash_id 'trayek_id',CONCAT(trayek.asal,' - ',trayek.tujuan) 'trayek',
-				kategori_kendaraan.kategori_id 'katid',kategori_kendaraan.hash_id 'kategori_kendaraan_id', CONCAT(kategori_kendaraan.nama,' - ',kategori_kendaraan.kode) 'kategori'
+				kategori_kendaraan.katid 'katid',kategori_kendaraan.kategori_id 'kategori_kendaraan_id', CONCAT(kategori_kendaraan.nama,' - ',kategori_kendaraan.kode) 'kategori',
+                kategori_kendaraan.total_seat 'jumlah_seat', kategori_kendaraan.layout_id 'layout_id'
 			FROM kendaraan
 			JOIN trayek ON kendaraan.trayek_id=trayek.trayek_id
-			JOIN kategori_kendaraan ON kendaraan.kategori_kendaraan_id=kategori_kendaraan.kategori_id
+			JOIN (SELECT k.kategori_id 'katid',k.nama,k.kode,k.hash_id 'kategori_id',l.layout_id 'layid',  l.hash_id 'layout_id',l.total_seat FROM kategori_kendaraan k JOIN layout_kursi l ON k.layout_kursi_id=l.layout_id) kategori_kendaraan ON kendaraan.kategori_kendaraan_id=kategori_kendaraan.katid
 			WHERE kendaraan_id = ?`
 	result := db.Raw(sql+" LIMIT 1", id).Scan(&tmp)
 	if err := result.Error; err != nil {
@@ -137,7 +141,19 @@ func (data *KendaraanResponse) Find(db *gorm.DB,string ...string) (interface{},e
 	if result.RowsAffected < 1 {
 		return nil,errors.New("data tidak ditemukan")
 	}
-	return tmp,nil
+	getSurat := SuratKendaraanResponse{}
+	activeSurat,err := getSurat.FindByKendaraanActive(db,tmp.HashID)
+	//if err !=  nil{
+	//	activeSurat = []SuratKendaraanResponse{}
+	//}
+	var count int64
+	count = 0
+	db.Model(&SuratKendaraanResponse{}).Where("status = ?", "aktif").Where("NOW() > kadaluarsa").Count(&count)
+	return struct {
+		JumlahSuratKadaluarsa int64 `json:"jumlah_surat_kadaluarsa"`
+		KendaraanPayload
+		Surat interface{} `json:"surat"`
+	}{KendaraanPayload: tmp, JumlahSuratKadaluarsa: count,Surat: activeSurat},nil
 }
 
 
@@ -166,7 +182,7 @@ func (data *KendaraanPayload) Delete(db *gorm.DB,string ...string) (interface{},
 
 
 func (data *KendaraanResponse) All(db *gorm.DB,string ...string) (interface{}, error) {
-	var result []KendaraanPayload
+	result := []KendaraanPayload{}
 	limit,err := strconv.Atoi(string[1])
 	if err != nil {
 		return nil, err
@@ -232,7 +248,21 @@ func (data *KendaraanPayload) defineValue()  (tmp KendaraanResponse,err error) {
 }
 
 func (data *KendaraanResponse) switchValue(tmp *KendaraanResponse) {
-	// hanya digunakan untuk update
+	data.JenisKendaraan = tmp.JenisKendaraan
+	data.NoKendaraan = tmp.NoKendaraan
+	data.NoMesin = tmp.NoMesin
+	data.NoRangka = tmp.NoRangka
+	data.Pemilik = tmp.Pemilik
+	data.MaxSeat = tmp.MaxSeat
+	data.DayaAngkut = tmp.DayaAngkut
+	data.Merk = tmp.Merk
+	data.TahunPembuatan = tmp.TahunPembuatan
+	data.KapasitasMesin = tmp.KapasitasMesin
+	data.KodeUnit = tmp.KodeUnit
+	data.NoBody = tmp.NoBody
+	data.Status = tmp.Status
+	data.TrayekID = tmp.TrayekID
+	data.KategoriKendaraanID = tmp.KategoriKendaraanID
 }
 
 func (data *KendaraanPayload) setPayload(r *http.Request)  (err error)  {

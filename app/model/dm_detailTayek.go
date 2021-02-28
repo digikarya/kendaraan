@@ -44,7 +44,7 @@ func (data *DetailTrayekPayload) Create(db *gorm.DB,r *http.Request) (interface{
 		return nil, err
 	}
 	trx := db.Begin()
-	tmp,err := data.defineValue(trx)
+	tmp,err := data.defineValue(trx,r)
 	if err != nil {
 		trx.Rollback()
 		return nil, err
@@ -80,7 +80,7 @@ func (data *DetailTrayekPayload) Update(db *gorm.DB,r *http.Request,string ...st
 	if _,err := data.countData(db,id);err != nil {
 		return nil, err
 	}
-	tmp,err := data.defineValue(db)
+	tmp,err := data.defineValue(db,r)
 	tmpUpdate := DetailTrayekResponse{}
 	if err := db.Where("detail_trayek_id = ?", id).First(&tmpUpdate).Error; err != nil {
 		return nil,err
@@ -133,7 +133,7 @@ func (data *DetailTrayekPayload) Delete(db *gorm.DB,string ...string) (interface
 
 
 func (data *DetailTrayekResponse) All(db *gorm.DB,string ...string) (interface{}, error) {
-	var result []DetailTrayekResponse
+	result :=  []DetailTrayekResponse{}
 	limit,err := strconv.Atoi(string[1])
 	if err != nil {
 		return nil, err
@@ -160,10 +160,10 @@ func (data *DetailTrayekResponse) All(db *gorm.DB,string ...string) (interface{}
 // ==================================================================================================
 
 
-func (data *DetailTrayekPayload) defineValue(db *gorm.DB)  (tmp DetailTrayekResponse,err error) {
+func (data *DetailTrayekPayload) defineValue(db *gorm.DB,r *http.Request)  (tmp DetailTrayekResponse,err error) {
 	// ambil data dari payload menjadi data siap insert atau update
 	//tmp.Sequence = data.Sequence
-	if err = data.checkOtherService(&tmp,data.AgenID); err != nil {
+	if err = data.checkOtherService(&tmp,r,data.AgenID); err != nil {
 		return tmp,err
 	}
 	tmp.AgenID,err = helper.DecodeHash(data.AgenID)
@@ -184,9 +184,9 @@ func (data *DetailTrayekPayload) defineValue(db *gorm.DB)  (tmp DetailTrayekResp
 	return tmp,nil
 }
 
-func (data *DetailTrayekPayload) checkOtherService(tmp *DetailTrayekResponse,hashID ...string)  (err error) {
+func (data *DetailTrayekPayload) checkOtherService(tmp *DetailTrayekResponse,r *http.Request,hashID ...string)  (err error) {
 	checkAgen := helper.GetEndpoint().Kepegawaian.URL+helper.GetEndpoint().Kepegawaian.Agen+"/"+hashID[0]
-	code,responseAgen,err := helper.Curl("GET",checkAgen,nil)
+	code,responseAgen,err := helper.Curl("GET",checkAgen,r,nil)
 	if err != nil{
 		return err
 	}

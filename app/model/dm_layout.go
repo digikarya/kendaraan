@@ -130,7 +130,7 @@ func (data *LayoutPayload) Delete(db *gorm.DB,string ...string) (interface{},err
 
 
 func (data *LayoutResponse) All(db *gorm.DB,string ...string) (interface{}, error) {
-	var result []LayoutResponse
+	 result := []LayoutResponse{}
 	limit,err := strconv.Atoi(string[1])
 	if err != nil {
 		return nil, err

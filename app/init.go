@@ -1,6 +1,7 @@
 package app
 
 import (
+	"github.com/digikarya/helper"
 	"github.com/digikarya/kendaraan/app/handler"
 	"github.com/digikarya/kendaraan/config"
 	"github.com/gorilla/mux"
@@ -27,6 +28,9 @@ func (a *Kendaraan) Initialize(config *config.Config,route *mux.Router) {
 		log.Fatal("Could not connect database")
 	}
 	sqlDB, err := db.DB()
+	if err != nil {
+		log.Fatal("Could not connect database")
+	}
 	// SetMaxIdleConns sets the maximum number of connections in the idle connection pool.
 	sqlDB.SetMaxOpenConns(25)
 	sqlDB.SetMaxIdleConns(25)
@@ -72,6 +76,7 @@ func (a *Kendaraan) setRouters() {
 	a.Post("/check_list", a.guard(handler.CheckListKendaraanCreate))
 	a.Get("/check_list/all", a.guard(handler.CheckListKendaraanAll))
 	a.Get("/check_list/{hashid}", a.guard(handler.CheckListKendaraanFind))
+	a.Get("/check_list/byKategori/{hashid}", a.guard(handler.CheckListKendaraanFindByKategori))
 	a.Put("/check_list/{hashid}", a.guard(handler.CheckListKendaraanUpdate))
 	a.Delete("/check_list/{hashid}", a.guard(handler.CheckListKendaraanDelete))
 
@@ -90,14 +95,19 @@ func (a *Kendaraan) setRouters() {
 	a.Get("/kendaraan/{hashid}", a.guard(handler.KendaraanFind))
 	a.Put("/kendaraan/{hashid}", a.guard(handler.KendaraanUpdate))
 	a.Delete("/kendaraan/{hashid}", a.guard(handler.KendaraanDelete))
-
+	a.Post("/kendaraan/surat", a.guard(handler.SuratKendaraanCreate))
+	a.Get("/kendaraan/surat/{hashid}", a.guard(handler.SuratKendaraanFindByKendaraanAll))
+	a.Get("/kendaraan/surat/{hashid}/active", a.guard(handler.SuratKendaraanFindByKendaraanActive))
+	a.Delete("/kendaraan/surat/{hashid}", a.guard(handler.SuratKendaraanDelete))
+	a.Put("/kendaraan/surat/{hashid}", a.guard(handler.SuratKendaraanUpdate))
 
 	a.Post("/layout/search", a.guard(handler.SearchLayout))
 	a.Post("/jenis_kendaraan/search", a.guard(handler.SearchJenisKendaraan))
 	a.Post("/kategori_kendaraan/search", a.guard(handler.SearchKategoriKendaraan))
-	a.Post("/jadwal/search", a.guard(handler.SearchLayout))
 	a.Post("/check_list/search", a.guard(handler.SearchCheckList))
 	a.Post("/trayek/search", a.guard(handler.SearchTrayek))
+	a.Post("/kendaraan/search", a.guard(handler.SearchKendaraan))
+	a.Post("/jadwal/search", a.guard(handler.SearchJadwal))
 }
 
 
@@ -136,10 +146,10 @@ func (a *Kendaraan) guest(handler RequestHandlerFunction) http.HandlerFunc {
 
 func (a *Kendaraan) guard(handler RequestHandlerFunction) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		//if err := authHelper.Authorization(a.DB,r,"*");err != nil {
-		//	helper.RespondJSONError(w,http.StatusUnauthorized,err)
-		//	return
-		//}
+		if err := helper.AuthorizeRole(a.DB,r,"admin");err != nil {
+			helper.RespondJSONError(w,http.StatusUnauthorized,err)
+			return
+		}
 		handler(a.DB, w, r)
 	}
 }

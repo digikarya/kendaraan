@@ -25,6 +25,8 @@ type CheckListKendaraanResponseMany struct{
 	Merek	 		string `json:"merek"  validate:"required"`
 	Detail 			[]DetailCheckListKendaraanResponse `gorm:"foreignKey:check_list_id;references:check_list_id" json:"detail"  validate:"" `
 }
+
+
 type CheckListKendaraanPayload struct{
 	CheckListID     uint `gorm:"column:check_list_id; PRIMARY_KEY" json:"-"`
 	HashID 			string `json:"id"  validate:""`
@@ -126,7 +128,7 @@ func (data *CheckListKendaraanPayload) Update(db *gorm.DB,r *http.Request,string
 		return nil,err
 	}
 	tmpUpdate.switchValue(&tmp)
-	result := db.Where("check_list_id = ?", id).Save(&tmpUpdate)
+	result := db.Select("nama","tipe","check_list_id").Where("jenis_id = ?", id).Updates(&tmpUpdate)
 	if result.Error != nil {
 		return nil,errors.New("gagal update")
 	}
@@ -140,6 +142,28 @@ func (data *CheckListKendaraanResponseMany) Find(db *gorm.DB,string ...string) (
 		return nil,errors.New("data tidak sesuai")
 	}
 	result := db.Preload(clause.Associations).Where("check_list_id",id).Find(&data)
+	if result.Error != nil {
+		return nil,result.Error
+	}
+
+	if result.RowsAffected < 1 {
+		return nil,errors.New("data tidak ditemukan")
+	}
+	return data,nil
+}
+
+
+func (data *CheckListKendaraanResponseMany) FindByKategori(db *gorm.DB,string ...string) (interface{},error){
+	id,err := helper.DecodeHash(string[0])
+	if err != nil {
+		return nil,errors.New("data tidak sesuai")
+	}
+	kategori := KategoriKendaraanPayload{}
+	result := db.Where("kategori_id",id).Find(&kategori)
+	if result.Error != nil {
+		return nil,result.Error
+	}
+	result = db.Preload(clause.Associations).Where("check_list_id",kategori.CheckListID).Find(&data)
 	if result.Error != nil {
 		return nil,result.Error
 	}
@@ -188,7 +212,7 @@ func (data *CheckListKendaraanPayload) Delete(db *gorm.DB,string ...string) (int
 
 
 func (data *CheckListKendaraanResponse) All(db *gorm.DB,string ...string) (interface{}, error) {
-	var result []CheckListKendaraanPayloadMany
+	 result := []CheckListKendaraanPayloadMany{}
 	limit,err := strconv.Atoi(string[1])
 	if err != nil {
 		return nil, err

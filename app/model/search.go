@@ -19,7 +19,7 @@ func (payload *SearchRequest) LayoutSearch(db *gorm.DB,r *http.Request)  (interf
 	if err != nil {
 		return nil,errors.New("data tidak sesuai")
 	}
-	var tmpData = []LayoutResponse{}
+	tmpData := []LayoutResponse{}
 	result := db.Where("nama LIKE ?", "%"+payload.Condition[0].Value+"%").Find(&tmpData)
 	result = result.Order("nama asc, nama asc").Find(&tmpData)
 	if err := result.Error; err != nil {
@@ -37,7 +37,7 @@ func (payload *SearchRequest) JenisKendaraanSearch(db *gorm.DB,r *http.Request) 
 	if err != nil {
 		return nil,errors.New("data tidak sesuai")
 	}
-	var tmpData = []JenisKendaraanResponse{}
+	tmpData := []JenisKendaraanResponse{}
 	result := db.Where("nama LIKE ?", "%"+payload.Condition[0].Value+"%").Or("kode LIKE ?", "%"+payload.Condition[0].Value+"%").Find(&tmpData)
 	result = result.Order("nama asc").Find(&tmpData)
 	if err := result.Error; err != nil {
@@ -55,7 +55,7 @@ func (payload *SearchRequest) CheckListSearch(db *gorm.DB,r *http.Request)  (int
 	if err != nil {
 		return nil,errors.New("data tidak sesuai")
 	}
-	var tmpData = []CheckListKendaraanResponse{}
+	tmpData := []CheckListKendaraanResponse{}
 	result := db.Where("jenis_kendaraan LIKE ?", "%"+payload.Condition[0].Value+"%").Or("merek LIKE ?", "%"+payload.Condition[0].Value+"%").Find(&tmpData)
 	result = result.Order("merek asc").Find(&tmpData)
 	if err := result.Error; err != nil {
@@ -100,9 +100,8 @@ func (payload *SearchRequest) TrayekSearch(db *gorm.DB,r *http.Request)  (interf
 	if err != nil {
 		return nil,errors.New("data tidak sesuai")
 	}
-	var tmpData = []TrayekPayload{}
+	tmpData := []TrayekPayload{}
 	result := db.Find(&tmpData)
-
 	if payload.Condition[0].Column == "asal"{
 		if len(payload.Condition) < 2 {
 			return nil,errors.New("data tidak sesuai")
@@ -121,6 +120,63 @@ func (payload *SearchRequest) TrayekSearch(db *gorm.DB,r *http.Request)  (interf
 		return nil,errors.New("data tidak ditemukan")
 	}
 	return tmpData,nil
+}
+
+
+func (payload *SearchRequest) JadwalSearch(db *gorm.DB,r *http.Request)  (interface{},error) {
+	err := payload.setPayload(r)
+	if err != nil {
+		return nil,errors.New("data tidak sesuai")
+	}
+	tmp := []JadwalPayload{}
+	sql := `SELECT
+			jadwal.*,CONCAT(trayek.asal,' - ',trayek.tujuan) 'trayek', trayek.hash_id 'trayek_id'
+			FROM jadwal
+			JOIN trayek ON jadwal.trayek_id=trayek.trayek_id`
+	exec := db.Raw(sql).Scan(&tmp)
+	if payload.Condition[0].Column == "asal"{
+		if len(payload.Condition) < 2 {
+			return nil,errors.New("data tidak sesuai")
+		}
+		sql = sql+" WHERE asal LIKE ? AND tujuan LIKE ? "
+		exec = db.Raw(sql, "%"+payload.Condition[0].Value+"%","%"+payload.Condition[1].Value+"%").Scan(&tmp)
+	}else{
+		sql = sql+" WHERE no_trayek LIKE ? "
+		if payload.Condition[0].Column != "kode" {
+			return nil,errors.New("data tidak sesuai")
+		}
+		exec = db.Raw( sql,"%"+payload.Condition[0].Value+"%").Scan(&tmp)
+	}
+	if exec.Error != nil {
+		return tmp,exec.Error
+	}
+	return tmp, err
+}
+
+
+func (payload *SearchRequest) KendaraanSearch(db *gorm.DB,r *http.Request)  (interface{},error) {
+	err := payload.setPayload(r)
+	if err != nil {
+		return nil,errors.New("data tidak sesuai")
+	}
+	result := []KendaraanPayload{}
+
+	//trans := db.Limit(limit).Find(&result)
+	sql := `SELECT
+			kendaraan.*,trayek.trayek_id ,
+				trayek.hash_id 'trayek_id',CONCAT(trayek.asal,' - ',trayek.tujuan) 'trayek',
+				kategori_kendaraan.kategori_id 'katid',kategori_kendaraan.hash_id 'kategori_kendaraan_id', CONCAT(kategori_kendaraan.nama,' - ',kategori_kendaraan.kode) 'kategori'
+			FROM kendaraan
+			JOIN trayek ON kendaraan.trayek_id=trayek.trayek_id
+			JOIN kategori_kendaraan ON kendaraan.kategori_kendaraan_id=kategori_kendaraan.kategori_id
+			WHERE replace(no_kendaraan,' ','')  LIKE ? OR kode_unit LIKE ? OR no_body LIKE ?`
+	param := "%"+payload.Condition[0].Value+"%"
+	exec := db.Raw(sql+" ", param,param,param).Scan(&result)
+	if exec.Error != nil {
+		return result,exec.Error
+	}
+
+	return result,nil
 }
 
 func (payload *SearchRequest) setPayload(r *http.Request)  (err error)  {

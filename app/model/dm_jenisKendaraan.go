@@ -10,14 +10,14 @@ import (
 )
 
 type JenisKendaraanPayload struct{
-	JenisID    uint `gorm:"column:layout_id; PRIMARY_KEY" json:"-"`
+	JenisID    uint `gorm:"column:jenis_id; PRIMARY_KEY" json:"-"`
 	HashID 		string `json:"id"  validate:""`
 	Nama 	string `json:"nama"  validate:"required"`
 	Kode 	string `json:"kode"  validate:"required"`
 	Jenis 	string `json:"jenis"  validate:"required"`
 }
 type JenisKendaraanResponse struct{
-	JenisID    uint `gorm:"column:layout_id; PRIMARY_KEY" json:"-"`
+	JenisID    uint `gorm:"column:jenis_id; PRIMARY_KEY" json:"-"`
 	HashID 		string `json:"id"  validate:""`
 	Nama 	string `json:"nama"  validate:"required"`
 	Kode 	string `json:"kode"  validate:"required"`
@@ -76,7 +76,7 @@ func (data *JenisKendaraanPayload) Update(db *gorm.DB,r *http.Request,string ...
 		return nil,err
 	}
 	tmpUpdate.switchValue(&tmp)
-	result := db.Where("jenis_id = ?", id).Save(&tmpUpdate)
+	result := db.Select("nama","kode","jenis").Where("jenis_id = ?", id).Updates(&tmpUpdate)
 	if result.Error != nil {
 		return nil,errors.New("gagal update")
 	}
@@ -124,7 +124,7 @@ func (data *JenisKendaraanPayload) Delete(db *gorm.DB,string ...string) (interfa
 
 
 func (data *JenisKendaraanResponse) All(db *gorm.DB,string ...string) (interface{}, error) {
-	var result []JenisKendaraanResponse
+	 result := []JenisKendaraanResponse{}
 	limit,err := strconv.Atoi(string[1])
 	if err != nil {
 		return nil, err

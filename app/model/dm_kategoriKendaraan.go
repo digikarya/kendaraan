@@ -159,7 +159,7 @@ func (data *KategoriKendaraanPayload) Delete(db *gorm.DB,string ...string) (inte
 
 
 func (data *KategoriKendaraanPayload) All(db *gorm.DB,string ...string) (interface{}, error) {
-	var result []KategoriKendaraanPayload
+ 	result :=  []KategoriKendaraanPayload{}
 	limit,err := strconv.Atoi(string[1])
 	if err != nil {
 		return nil, err
